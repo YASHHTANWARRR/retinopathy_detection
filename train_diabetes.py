@@ -10,10 +10,12 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, models
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
+from torch.utils.data import WeightedRandomSampler
+from torchvision.models import efficientnet_b4
 
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 BATCH_SIZE = 32
-EPOCHS = 30
+EPOCHS = 15
 NUM_CLASSES = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 csv_path = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/trainLabels.csv"
@@ -65,14 +67,32 @@ val_transform = transforms.Compose([
 train_dataset = RetinoDataset(train_df, transform=train_transform)
 val_dataset = RetinoDataset(val_df, transform=val_transform)
 
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+labels = train_df["label"].values
+class_sample_count = np.bincount(labels)
+
+#added weight sampler to handle class imbalance
+weights = 1. / class_sample_count
+samples_weight = weights[labels]
+
+sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
+
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler, num_workers=2)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
 
-model = models.resnet18(pretrained=True)
+#model = models.resnet18(pretrained=True) #if using resnet18
+model = efficientnet_b4(pretrained=True)#if using efficientnet_b4
+model.classifier[1] = nn.Linear(model.classifier[1].in_features, NUM_CLASSES)
+
 model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
 model = model.to(DEVICE)
 
-criterion = nn.CrossEntropyLoss()
+class_counts = df["label"].value_counts().sort_index()
+#added weight class
+weights = 1.0 / class_counts
+weights = torch.tensor(weights.values, dtype=torch.float).to(DEVICE)
+
+criterion = nn.CrossEntropyLoss(weight=weights)
+
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0003)
 
 def train():
