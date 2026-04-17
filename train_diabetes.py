@@ -11,10 +11,10 @@ from torchvision import transforms, models
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
 from torch.utils.data import WeightedRandomSampler
-from torchvision.models import efficientnet_b4
+from torchvision.models import efficientnet_b0
 
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
-BATCH_SIZE = 32
+BATCH_SIZE = 8
 EPOCHS = 15
 NUM_CLASSES = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -81,7 +81,7 @@ val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_w
 
 #model = models.resnet18(pretrained=True) #if using resnet18
 
-model = efficientnet_b4(pretrained=True)
+model = efficientnet_b0(pretrained=True)
 
 model.classifier[1] = nn.Linear(
     model.classifier[1].in_features,
@@ -94,11 +94,10 @@ model = model.to(DEVICE)
 
 class_counts = df["label"].value_counts().sort_index()
 #added weight class
-weights = 1.0 / class_counts
-weights = torch.tensor(weights.values, dtype=torch.float).to(DEVICE)
+#weights = 1.0 / class_counts
+#weights = torch.tensor(weights.values, dtype=torch.float).to(DEVICE)
 
-criterion = nn.CrossEntropyLoss(weight=weights)
-
+criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0003)
 
 def train():
@@ -164,6 +163,6 @@ for epoch in range(EPOCHS):
     print(f"Val Loss: {val_loss:.4f}")
     print(f"Val Accuracy: {val_acc:.2f}%")
 
-torch.save(model.state_dict(), "retinopathy_resnet.pth")
+torch.save(model.state_dict(), "retinopathy_efficientnet.pth")
 
 print("\nModel saved!")

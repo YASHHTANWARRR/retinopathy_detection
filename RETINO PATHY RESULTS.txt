@@ -1,5 +1,5 @@
 RETINO PATHY RESULTS 
- EPOCH IS 5
+ EPOCH IS 5 and using resnet18
  rapids_clean) hornet@hornet:~/Desktop/retinopathy_detection$ python train_diabetes.py
 <frozen importlib._bootstrap_external>:1184: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
 <frozen importlib._bootstrap_external>:1184: FutureWarning: The cuda.cuda module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.driver module instead.
@@ -183,3 +183,6 @@ Val Loss: 0.6821
 Val Accuracy: 78.29%
 
 Model saved!
+
+
+epoch 15 results with efficienet_b0
