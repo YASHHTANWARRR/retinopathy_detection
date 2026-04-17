@@ -13,7 +13,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 BATCH_SIZE = 32
-EPOCHS = 5
+EPOCHS = 30
 NUM_CLASSES = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 csv_path = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/trainLabels.csv"
