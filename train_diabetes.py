@@ -2,6 +2,7 @@ import os
 import torch
 import cudf
 import numpy as np
+import pandas as pd
 import torch.nn as nn
 from PIL import Image
 from tqdm import tqdm
@@ -10,30 +11,23 @@ from torchvision import transforms, models
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
 
-DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train"
+DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 BATCH_SIZE = 32
 EPOCHS = 5
 NUM_CLASSES = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+csv_path = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/trainLabels.csv"
 
-data = []
+df = pd.read_csv(csv_path)
 
-for label in os.listdir(DATA_PATH):
-    if not label.isdigit():
-        continue
+df["image"] = df["image"].apply(
+    lambda x: os.path.join(DATA_PATH, x + ".jpeg")
+)
 
-    folder = os.path.join(DATA_PATH, label)
+df.rename(columns={"level": "label"}, inplace=True)
 
-    for img in os.listdir(folder):
-        img_path = os.path.join(folder, img)
-
-        if not os.path.isfile(img_path):
-            continue
-
-        data.append([img_path, int(label)])
-
-df = cudf.DataFrame(data, columns=["image", "label"])
-df = df.to_pandas()
+print(df.head())
+print("Total samples:", len(df))
 
 train_df, val_df = train_test_split(df, test_size=0.2, stratify=df["label"])
 
