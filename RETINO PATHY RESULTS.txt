@@ -186,3 +186,426 @@ Model saved!
 
 
 epoch 15 results with efficienet_b0
+
+
+(rapids_clean) hornet@hornet:~/Desktop/retinopathy_detection$ python train_diabetes.py
+<frozen importlib._bootstrap_external>:1184: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+<frozen importlib._bootstrap_external>:1184: FutureWarning: The cuda.cuda module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.driver module instead.
+                                               image  label
+0  /home/hornet/dataset_folders/retinopathy_datas...      0
+1  /home/hornet/dataset_folders/retinopathy_datas...      0
+2  /home/hornet/dataset_folders/retinopathy_datas...      0
+3  /home/hornet/dataset_folders/retinopathy_datas...      0
+4  /home/hornet/dataset_folders/retinopathy_datas...      1
+Total samples: 35126
+/home/hornet/miniconda3/envs/rapids_clean/lib/python3.10/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/hornet/miniconda3/envs/rapids_clean/lib/python3.10/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=EfficientNet_B0_Weights.IMAGENET1K_V1`. You can also use `weights=EfficientNet_B0_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+100%|██████████████████████████████████| 3513/3513 [03:16<00:00, 17.91it/s]
+
+Confusion Matrix:
+[[2899 1766  401   24   72]
+ [ 206  228   38    7   10]
+ [ 245  238  291  187   97]
+ [  21   14   17   94   29]
+ [   6    4   11   21  100]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.86      0.56      0.68      5162
+           1       0.10      0.47      0.17       489
+           2       0.38      0.28      0.32      1058
+           3       0.28      0.54      0.37       175
+           4       0.32      0.70      0.44       142
+
+    accuracy                           0.51      7026
+   macro avg       0.39      0.51      0.40      7026
+weighted avg       0.71      0.51      0.58      7026
+
+
+Epoch 1
+Train Loss: 1.0937
+Val Loss: 1.0712
+Val Accuracy: 51.41%
+100%|██████████████████████████████████| 3513/3513 [03:25<00:00, 17.08it/s]
+
+Confusion Matrix:
+[[2478 2327  304   12   41]
+ [ 167  287   32    1    2]
+ [ 196  292  426  114   30]
+ [  13   16   55   87    4]
+ [   2   11   25   26   78]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.87      0.48      0.62      5162
+           1       0.10      0.59      0.17       489
+           2       0.51      0.40      0.45      1058
+           3       0.36      0.50      0.42       175
+           4       0.50      0.55      0.53       142
+
+    accuracy                           0.48      7026
+   macro avg       0.47      0.50      0.44      7026
+weighted avg       0.74      0.48      0.55      7026
+
+
+Epoch 2
+Train Loss: 0.8582
+Val Loss: 1.0540
+Val Accuracy: 47.77%
+100%|██████████████████████████████████| 3513/3513 [03:28<00:00, 16.87it/s]
+
+Confusion Matrix:
+[[3753  986  309   85   29]
+ [ 258  170   43   16    2]
+ [ 291  162  343  226   36]
+ [  11   15   36  102   11]
+ [   8    5   12   34   83]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.87      0.73      0.79      5162
+           1       0.13      0.35      0.19       489
+           2       0.46      0.32      0.38      1058
+           3       0.22      0.58      0.32       175
+           4       0.52      0.58      0.55       142
+
+    accuracy                           0.63      7026
+   macro avg       0.44      0.51      0.45      7026
+weighted avg       0.73      0.63      0.67      7026
+
+
+Epoch 3
+Train Loss: 0.7243
+Val Loss: 0.9541
+Val Accuracy: 63.35%
+100%|██████████████████████████████████| 3513/3513 [03:16<00:00, 17.85it/s]
+
+Confusion Matrix:
+[[2630 2063  396   56   17]
+ [ 185  247   49    8    0]
+ [ 135  311  455  108   49]
+ [  13   12   60   71   19]
+ [   8   13   26   12   83]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.89      0.51      0.65      5162
+           1       0.09      0.51      0.16       489
+           2       0.46      0.43      0.45      1058
+           3       0.28      0.41      0.33       175
+           4       0.49      0.58      0.54       142
+
+    accuracy                           0.50      7026
+   macro avg       0.44      0.49      0.42      7026
+weighted avg       0.74      0.50      0.57      7026
+
+
+Epoch 4
+Train Loss: 0.6418
+Val Loss: 1.0976
+Val Accuracy: 49.62%
+100%|██████████████████████████████████| 3513/3513 [03:12<00:00, 18.21it/s]
+
+Confusion Matrix:
+[[2588 2061  453   27   33]
+ [ 168  255   62    3    1]
+ [ 161  261  518   81   37]
+ [   9   15   68   62   21]
+ [   3   11   20   21   87]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.88      0.50      0.64      5162
+           1       0.10      0.52      0.16       489
+           2       0.46      0.49      0.48      1058
+           3       0.32      0.35      0.34       175
+           4       0.49      0.61      0.54       142
+
+    accuracy                           0.50      7026
+   macro avg       0.45      0.50      0.43      7026
+weighted avg       0.74      0.50      0.57      7026
+
+
+Epoch 5
+Train Loss: 0.5914
+Val Loss: 1.0847
+Val Accuracy: 49.96%
+100%|██████████████████████████████████| 3513/3513 [03:10<00:00, 18.48it/s]
+
+Confusion Matrix:
+[[2658 1617  802   68   17]
+ [ 166  209  105    7    2]
+ [ 138  190  560  139   31]
+ [   7   11   69   85    3]
+ [   6    7   38   21   70]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.89      0.51      0.65      5162
+           1       0.10      0.43      0.17       489
+           2       0.36      0.53      0.43      1058
+           3       0.27      0.49      0.34       175
+           4       0.57      0.49      0.53       142
+
+    accuracy                           0.51      7026
+   macro avg       0.44      0.49      0.42      7026
+weighted avg       0.74      0.51      0.57      7026
+
+
+Epoch 6
+Train Loss: 0.5587
+Val Loss: 1.1914
+Val Accuracy: 50.98%
+100%|██████████████████████████████████| 3513/3513 [03:10<00:00, 18.42it/s]
+
+Confusion Matrix:
+[[3277 1236  618   15   16]
+ [ 213  185   88    3    0]
+ [ 216  151  583   76   32]
+ [  11   13   65   68   18]
+ [   8    7   34   16   77]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.88      0.63      0.74      5162
+           1       0.12      0.38      0.18       489
+           2       0.42      0.55      0.48      1058
+           3       0.38      0.39      0.39       175
+           4       0.54      0.54      0.54       142
+
+    accuracy                           0.60      7026
+   macro avg       0.47      0.50      0.46      7026
+weighted avg       0.74      0.60      0.65      7026
+
+
+Epoch 7
+Train Loss: 0.5143
+Val Loss: 1.0459
+Val Accuracy: 59.64%
+100%|██████████████████████████████████| 3513/3513 [03:09<00:00, 18.56it/s]
+
+Confusion Matrix:
+[[3149 1202  791    8   12]
+ [ 210  159  118    1    1]
+ [ 194  129  645   65   25]
+ [  11    6   78   68   12]
+ [  11    2   43   10   76]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.88      0.61      0.72      5162
+           1       0.11      0.33      0.16       489
+           2       0.39      0.61      0.47      1058
+           3       0.45      0.39      0.42       175
+           4       0.60      0.54      0.57       142
+
+    accuracy                           0.58      7026
+   macro avg       0.48      0.49      0.47      7026
+weighted avg       0.74      0.58      0.63      7026
+
+
+Epoch 8
+Train Loss: 0.4661
+Val Loss: 1.0865
+Val Accuracy: 58.31%
+100%|██████████████████████████████████| 3513/3513 [03:09<00:00, 18.50it/s]
+
+Confusion Matrix:
+[[3839  743  465   80   35]
+ [ 284  110   80   12    3]
+ [ 276  114  460  154   54]
+ [  13    8   51   90   13]
+ [   5    3   23   30   81]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.87      0.74      0.80      5162
+           1       0.11      0.22      0.15       489
+           2       0.43      0.43      0.43      1058
+           3       0.25      0.51      0.33       175
+           4       0.44      0.57      0.49       142
+
+    accuracy                           0.65      7026
+   macro avg       0.42      0.50      0.44      7026
+weighted avg       0.73      0.65      0.68      7026
+
+
+Epoch 9
+Train Loss: 0.4309
+Val Loss: 1.0404
+Val Accuracy: 65.19%
+100%|██████████████████████████████████| 3513/3513 [03:08<00:00, 18.64it/s]
+
+Confusion Matrix:
+[[3846  850  435   14   17]
+ [ 276  139   72    1    1]
+ [ 268  121  592   51   26]
+ [  13    7   85   64    6]
+ [   7    3   33   11   88]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.87      0.75      0.80      5162
+           1       0.12      0.28      0.17       489
+           2       0.49      0.56      0.52      1058
+           3       0.45      0.37      0.41       175
+           4       0.64      0.62      0.63       142
+
+    accuracy                           0.67      7026
+   macro avg       0.51      0.51      0.51      7026
+weighted avg       0.75      0.67      0.70      7026
+
+
+Epoch 10
+Train Loss: 0.4027
+Val Loss: 0.9875
+Val Accuracy: 67.31%
+100%|██████████████████████████████████| 3513/3513 [03:09<00:00, 18.55it/s]
+
+Confusion Matrix:
+[[3416 1303  412   19   12]
+ [ 227  175   85    1    1]
+ [ 245  155  583   52   23]
+ [  12    6   89   60    8]
+ [  12    5   36   12   77]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.87      0.66      0.75      5162
+           1       0.11      0.36      0.16       489
+           2       0.48      0.55      0.52      1058
+           3       0.42      0.34      0.38       175
+           4       0.64      0.54      0.59       142
+
+    accuracy                           0.61      7026
+   macro avg       0.50      0.49      0.48      7026
+weighted avg       0.75      0.61      0.66      7026
+
+
+Epoch 11
+Train Loss: 0.3774
+Val Loss: 1.0617
+Val Accuracy: 61.36%
+100%|██████████████████████████████████| 3513/3513 [03:08<00:00, 18.64it/s]
+
+Confusion Matrix:
+[[3641 1045  427   19   30]
+ [ 247  159   79    0    4]
+ [ 263  127  573   56   39]
+ [  16    6   78   63   12]
+ [   3    7   35   13   84]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.87      0.71      0.78      5162
+           1       0.12      0.33      0.17       489
+           2       0.48      0.54      0.51      1058
+           3       0.42      0.36      0.39       175
+           4       0.50      0.59      0.54       142
+
+    accuracy                           0.64      7026
+   macro avg       0.48      0.50      0.48      7026
+weighted avg       0.74      0.64      0.68      7026
+
+
+Epoch 12
+Train Loss: 0.3531
+Val Loss: 1.0828
+Val Accuracy: 64.33%
+100%|██████████████████████████████████| 3513/3513 [03:10<00:00, 18.46it/s]
+
+Confusion Matrix:
+[[3238 1254  641   20    9]
+ [ 223  171   93    0    2]
+ [ 188  168  620   59   23]
+ [  11    7   86   65    6]
+ [  13    5   34   15   75]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.88      0.63      0.73      5162
+           1       0.11      0.35      0.16       489
+           2       0.42      0.59      0.49      1058
+           3       0.41      0.37      0.39       175
+           4       0.65      0.53      0.58       142
+
+    accuracy                           0.59      7026
+   macro avg       0.49      0.49      0.47      7026
+weighted avg       0.74      0.59      0.65      7026
+
+
+Epoch 13
+Train Loss: 0.3266
+Val Loss: 1.1847
+Val Accuracy: 59.34%
+100%|██████████████████████████████████| 3513/3513 [03:08<00:00, 18.64it/s]
+
+Confusion Matrix:
+[[4111  659  362   12   18]
+ [ 312  120   53    2    2]
+ [ 308  131  550   51   18]
+ [  19    9   82   60    5]
+ [  11    5   41   20   65]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.86      0.80      0.83      5162
+           1       0.13      0.25      0.17       489
+           2       0.51      0.52      0.51      1058
+           3       0.41      0.34      0.38       175
+           4       0.60      0.46      0.52       142
+
+    accuracy                           0.70      7026
+   macro avg       0.50      0.47      0.48      7026
+weighted avg       0.74      0.70      0.72      7026
+
+
+Epoch 14
+Train Loss: 0.3137
+Val Loss: 1.0265
+Val Accuracy: 69.83%
+100%|██████████████████████████████████| 3513/3513 [03:08<00:00, 18.65it/s]
+
+Confusion Matrix:
+[[4304  511  313   23   11]
+ [ 338   81   65    3    2]
+ [ 331   88  551   68   20]
+ [  20    3   76   69    7]
+ [  17    2   42   14   67]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.86      0.83      0.85      5162
+           1       0.12      0.17      0.14       489
+           2       0.53      0.52      0.52      1058
+           3       0.39      0.39      0.39       175
+           4       0.63      0.47      0.54       142
+
+    accuracy                           0.72      7026
+   macro avg       0.50      0.48      0.49      7026
+weighted avg       0.74      0.72      0.73      7026
+
+
+Epoch 15
+Train Loss: 0.2950
+Val Loss: 0.9806
+Val Accuracy: 72.19%
+
+Model saved!
