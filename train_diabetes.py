@@ -80,10 +80,16 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler,
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
 
 #model = models.resnet18(pretrained=True) #if using resnet18
-model = efficientnet_b4(pretrained=True)#if using efficientnet_b4
-model.classifier[1] = nn.Linear(model.classifier[1].in_features, NUM_CLASSES)
 
-model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
+model = efficientnet_b4(pretrained=True)
+
+model.classifier[1] = nn.Linear(
+    model.classifier[1].in_features,
+    NUM_CLASSES
+)#for efficientnet_b4
+
+#model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)#for resnet
+model.classifier[1] = nn.Linear(model.classifier[1].in_features, NUM_CLASSES)#for efficientnet
 model = model.to(DEVICE)
 
 class_counts = df["label"].value_counts().sort_index()
