@@ -12,6 +12,15 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
 from torch.utils.data import WeightedRandomSampler
 from torchvision.models import efficientnet_b0
+import matplotlib.pyplot as plt
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    classification_report,
+    confusion_matrix,
+    cohen_kappa_score
+)
 
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 BATCH_SIZE = 8
@@ -118,6 +127,7 @@ def train():
 
     return total_loss / len(train_loader)
 
+#updated validate function 
 def validate():
     model.eval()
     total_loss = 0
@@ -144,15 +154,62 @@ def validate():
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 
-    accuracy = 100 * correct / total
+    accuracy = accuracy_score(all_labels, all_preds)
+    precision = precision_score(all_labels, all_preds, average=None)
+    recall = recall_score(all_labels, all_preds, average=None)
+    kappa = cohen_kappa_score(all_labels, all_preds)
+
+    cm = confusion_matrix(all_labels, all_preds)
+    support = cm.sum(axis=1)
 
     print("\nConfusion Matrix:")
-    print(confusion_matrix(all_labels, all_preds))
+    print(cm)
 
     print("\nClassification Report:")
     print(classification_report(all_labels, all_preds))
 
-    return total_loss / len(val_loader), accuracy
+    print("\n📊 Additional Metrics:")
+    print("Accuracy:", accuracy)
+    print("Cohen’s Kappa:", kappa)
+    print("Precision per class:", precision)
+    print("Recall per class:", recall)
+    print("Support per class:", support)
+
+    os.makedirs("outputs", exist_ok=True)
+
+    classes = np.arange(len(precision))
+
+    # 1. Precision vs Recall
+    plt.figure()
+    plt.plot(classes, precision)
+    plt.plot(classes, recall)
+    plt.xlabel("Class")
+    plt.ylabel("Score")
+    plt.title("Precision vs Recall per Class")
+    plt.legend(["Precision", "Recall"])
+    plt.savefig("outputs/precision_vs_recall.png")
+    plt.close()
+
+    # 2. Support
+    plt.figure()
+    plt.plot(classes, support)
+    plt.xlabel("Class")
+    plt.ylabel("Samples")
+    plt.title("Support per Class")
+    plt.savefig("outputs/support.png")
+    plt.close()
+
+    # 3. Confusion Matrix Heatmap
+    plt.figure()
+    plt.imshow(cm)
+    plt.title("Confusion Matrix")
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.colorbar()
+    plt.savefig("outputs/confusion_matrix.png")
+    plt.close()
+
+    return total_loss / len(val_loader), accuracy * 100
 
 for epoch in range(EPOCHS):
     train_loss = train()
