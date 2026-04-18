@@ -19,7 +19,6 @@ from sklearn.metrics import (
 )
 import matplotlib.pyplot as plt
 
-# ---------------- CONFIG ----------------
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 CSV_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/trainLabels.csv"
 
@@ -30,14 +29,12 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 os.makedirs("outputs", exist_ok=True)
 
-# ---------------- LOAD DATA ----------------
 df = pd.read_csv(CSV_PATH)
 df["image"] = df["image"].apply(lambda x: os.path.join(DATA_PATH, x + ".jpeg"))
 df.rename(columns={"level": "label"}, inplace=True)
 
 train_df, val_df = train_test_split(df, test_size=0.2, stratify=df["label"])
 
-# ---------------- DATASET ----------------
 class RetinoDataset(Dataset):
     def __init__(self, df, transform=None):
         self.df = df.reset_index(drop=True)
@@ -57,7 +54,6 @@ class RetinoDataset(Dataset):
 
         return image, label
 
-# ---------------- TRANSFORMS ----------------
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -66,7 +62,6 @@ transform = transforms.Compose([
 train_dataset = RetinoDataset(train_df, transform)
 val_dataset = RetinoDataset(val_df, transform)
 
-# ---------------- SAMPLER ----------------
 labels = train_df["label"].values
 class_sample_count = np.bincount(labels)
 weights = 1. / class_sample_count
@@ -77,7 +72,6 @@ sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-# ---------------- MODELS ----------------
 def get_models():
     eff = efficientnet_b0(pretrained=True)
     eff.classifier[1] = nn.Linear(eff.classifier[1].in_features, NUM_CLASSES)
@@ -93,7 +87,6 @@ criterion = nn.CrossEntropyLoss()
 optimizer_eff = torch.optim.Adam(efficient_model.parameters(), lr=0.0003)
 optimizer_res = torch.optim.Adam(resnet_model.parameters(), lr=0.0003)
 
-# ---------------- CSV INIT ----------------
 csv_file = "outputs/metrics.csv"
 
 with open(csv_file, mode='w', newline='') as file:
@@ -106,7 +99,6 @@ with open(csv_file, mode='w', newline='') as file:
         "Ensemble_Acc", "Ensemble_Kappa", "Ensemble_Precision", "Ensemble_Recall", "Ensemble_F1"
     ])
 
-# ---------------- TRAIN ----------------
 def train(model, optimizer):
     model.train()
     total_loss = 0
@@ -125,7 +117,6 @@ def train(model, optimizer):
 
     return total_loss / len(train_loader)
 
-# ---------------- EVALUATE ----------------
 def evaluate_model(model):
     model.eval()
     all_preds, all_labels = [], []
@@ -149,7 +140,7 @@ def evaluate_model(model):
 
     return acc, kappa, precision, recall, f1
 
-# ---------------- ENSEMBLE ----------------
+# ENSEMBLE 
 def evaluate_ensemble(models):
     all_preds, all_labels = [], []
 
@@ -176,14 +167,12 @@ def evaluate_ensemble(models):
 
     return acc, kappa, precision, recall, f1
 
-# ---------------- HISTORY ----------------
 history = {
     "resnet": {"acc": [], "kappa": [], "f1": []},
     "efficientnet": {"acc": [], "kappa": [], "f1": []},
     "ensemble": {"acc": [], "kappa": [], "f1": []}
 }
 
-# ---------------- TRAIN LOOP ----------------
 for epoch in range(EPOCHS):
 
     print(f"\nEpoch {epoch+1}/{EPOCHS}")
@@ -222,7 +211,6 @@ for epoch in range(EPOCHS):
     print(f"ResNet → Acc:{res[0]:.4f} F1:{res[4]:.4f}")
     print(f"Ensemble → Acc:{ens[0]:.4f} F1:{ens[4]:.4f}")
 
-# ---------------- PLOTS ----------------
 epochs = range(1, EPOCHS + 1)
 
 plt.figure()
