@@ -30,7 +30,7 @@ EPOCHS = 15
 NUM_CLASSES = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-OUTPUT_DIR = "outputs_ensemble"
+OUTPUT_DIR = "outputs_ensemble_meta"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 df = pd.read_csv(CSV_PATH)
@@ -123,6 +123,7 @@ def evaluate_model(model):
             all_labels.extend(labels.numpy())
     return all_preds, all_labels
 
+#ensemble evaluation with weighted averaging
 def evaluate_ensemble():
     all_preds, all_labels = [], []
     with torch.no_grad():
@@ -136,12 +137,64 @@ def evaluate_ensemble():
             all_labels.extend(labels.numpy())
     return all_preds, all_labels
 
+#extracting meta features for stacking
+def get_meta_features():
+    efficient_model.eval()
+    resnet_model.eval()
+    features, labels_list = [], []
+
+    with torch.no_grad():
+        for images, labels in val_loader:
+            images = images.to(DEVICE)
+            out_eff = F.softmax(efficient_model(images), dim=1)
+            out_res = F.softmax(resnet_model(images), dim=1)
+            combined = torch.cat([out_eff, out_res], dim=1)
+            features.append(combined.cpu())
+            labels_list.append(labels)
+
+    return torch.cat(features), torch.cat(labels_list)
+
+#meta model implemented
+class MetaModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(NUM_CLASSES * 2, 64),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(64, NUM_CLASSES)
+        )
+
+    def forward(self, x):
+        return self.net(x)
+    
+#final evaluation of stacked model
+def evaluate_stacked():
+    efficient_model.eval()
+    resnet_model.eval()
+    meta_model.eval()
+    all_preds, all_labels = [], []
+
+    with torch.no_grad():
+        for images, labels in val_loader:
+            images = images.to(DEVICE)
+            out_eff = F.softmax(efficient_model(images), dim=1)
+            out_res = F.softmax(resnet_model(images), dim=1)
+            combined = torch.cat([out_eff, out_res], dim=1)
+            final_out = meta_model(combined)
+            preds = torch.argmax(final_out, dim=1)
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.numpy())
+
+    return all_preds, all_labels
+
 history = {
     "resnet": {"acc": [], "kappa": [], "f1": []},
     "efficientnet": {"acc": [], "kappa": [], "f1": []},
     "ensemble": {"acc": [], "kappa": [], "f1": []}
 }
 
+#treaining loop with evaluation after each epoch and logging metrics to CSV
 for epoch in range(EPOCHS):
     print(f"\nEpoch {epoch+1}/{EPOCHS}")
 
@@ -177,26 +230,43 @@ for epoch in range(EPOCHS):
     history["ensemble"]["kappa"].append(ens[1])
     history["ensemble"]["f1"].append(ens[4])
 
-    with open(csv_file, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([
-            epoch + 1,
-            res[0], res[1], res[2], res[3], res[4],
-            eff[0], eff[1], eff[2], eff[3], eff[4],
-            ens[0], ens[1], ens[2], ens[3], ens[4]
-        ])
-
     print(f"EffNet → Acc:{eff[0]:.4f} F1:{eff[4]:.4f}")
     print(f"ResNet → Acc:{res[0]:.4f} F1:{res[4]:.4f}")
     print(f"Ensemble → Acc:{ens[0]:.4f} F1:{ens[4]:.4f}")
 
+meta_X, meta_y = get_meta_features()
+meta_model = MetaModel().to(DEVICE)
+
+meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=1e-3)
+meta_criterion = nn.CrossEntropyLoss()
+
+for epoch in range(10):
+    meta_model.train()
+    inputs = meta_X.float().to(DEVICE)
+    targets = meta_y.to(DEVICE)
+
+    meta_optimizer.zero_grad()
+    outputs = meta_model(inputs)
+    loss = meta_criterion(outputs, targets)
+    loss.backward()
+    meta_optimizer.step()
+
+    print(f"Meta Epoch {epoch+1} Loss: {loss.item():.4f}")
+
+stack_preds, stack_labels = evaluate_stacked()
+
+stack_acc = accuracy_score(stack_labels, stack_preds)
+stack_f1 = f1_score(stack_labels, stack_preds, average='macro', zero_division=0)
+
+print(f"STACKED → Acc:{stack_acc:.4f} F1:{stack_f1:.4f}")
+
 epochs = range(1, EPOCHS + 1)
 
+#plotting
 plt.figure()
 plt.plot(epochs, history["resnet"]["acc"])
 plt.plot(epochs, history["efficientnet"]["acc"])
 plt.plot(epochs, history["ensemble"]["acc"])
-plt.legend(["ResNet", "EffNet", "Ensemble"])
 plt.savefig(os.path.join(OUTPUT_DIR, "accuracy.png"))
 plt.close()
 
@@ -204,7 +274,6 @@ plt.figure()
 plt.plot(epochs, history["resnet"]["kappa"])
 plt.plot(epochs, history["efficientnet"]["kappa"])
 plt.plot(epochs, history["ensemble"]["kappa"])
-plt.legend(["ResNet", "EffNet", "Ensemble"])
 plt.savefig(os.path.join(OUTPUT_DIR, "kappa.png"))
 plt.close()
 
@@ -212,11 +281,10 @@ plt.figure()
 plt.plot(epochs, history["resnet"]["f1"])
 plt.plot(epochs, history["efficientnet"]["f1"])
 plt.plot(epochs, history["ensemble"]["f1"])
-plt.legend(["ResNet", "EffNet", "Ensemble"])
 plt.savefig(os.path.join(OUTPUT_DIR, "f1.png"))
 plt.close()
 
-cm = confusion_matrix(ens_labels, ens_preds)
+cm = confusion_matrix(stack_labels, stack_preds)
 
 plt.figure()
 plt.imshow(cm)
@@ -224,7 +292,7 @@ plt.colorbar()
 plt.savefig(os.path.join(OUTPUT_DIR, "confusion_matrix.png"))
 plt.close()
 
-recall_vals = recall_score(ens_labels, ens_preds, average=None, zero_division=0)
+recall_vals = recall_score(stack_labels, stack_preds, average=None, zero_division=0)
 
 plt.figure()
 plt.plot(range(len(recall_vals)), recall_vals)
