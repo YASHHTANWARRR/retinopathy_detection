@@ -91,7 +91,7 @@ criterion = nn.CrossEntropyLoss(weight=weights, label_smoothing=0.1)
 optimizer_eff = torch.optim.Adam(efficient_model.parameters(), lr=0.0003)
 optimizer_res = torch.optim.Adam(resnet_model.parameters(), lr=0.0003)
 
-csv_file = "outputs/metrics.csv"
+csv_file = "outputs/metrics_run2.csv"
 
 with open(csv_file, mode='w', newline='') as file:
     writer = csv.writer(file)
