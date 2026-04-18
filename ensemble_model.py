@@ -166,9 +166,9 @@ def evaluate_ensemble(models):
 
     acc = accuracy_score(all_labels, all_preds)
     kappa = cohen_kappa_score(all_labels, all_preds)
-    precision = precision_score(all_labels, all_preds, average='macro')
-    recall = recall_score(all_labels, all_preds, average='macro')
-    f1 = f1_score(all_labels, all_preds, average='macro')
+    precision = precision_score(all_labels, all_preds, average='macro', zero_division=0)
+    recall = recall_score(all_labels, all_preds, average='macro', zero_division=0)
+    f1 = f1_score(all_labels, all_preds, average='macro', zero_division=0)
 
     return acc, kappa, precision, recall, f1
 
