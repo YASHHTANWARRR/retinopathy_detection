@@ -11,8 +11,8 @@ from torchvision import transforms, models
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
 from torch.utils.data import WeightedRandomSampler
-from torchvision.models import efficientnet_b0
 import matplotlib.pyplot as plt
+from torchvision.models import resnet18, ResNet18_Weights
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -79,7 +79,7 @@ val_dataset = RetinoDataset(val_df, transform=val_transform)
 labels = train_df["label"].values
 class_sample_count = np.bincount(labels)
 
-#added weight sampler to handle class imbalance
+# added weight sampler to handle class imbalance
 weights = 1. / class_sample_count
 samples_weight = weights[labels]
 
@@ -88,23 +88,12 @@ sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler, num_workers=2)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
 
-model = models.resnet18(pretrained=True) #if using resnet18
-
-#model = efficientnet_b0(pretrained=True)
-
-#model.classifier[1] = nn.Linear(
-    # model.classifier[1].in_features,
-    #NUM_CLASSES
-#)#for efficientnet_b4
-
-#model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)#for resnet
-model.classifier[1] = nn.Linear(model.classifier[1].in_features, NUM_CLASSES)#for efficientnet
+# ✅ FIXED MODEL
+model = resnet18(weights=ResNet18_Weights.DEFAULT)
+model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
 model = model.to(DEVICE)
 
 class_counts = df["label"].value_counts().sort_index()
-#added weight class
-#weights = 1.0 / class_counts
-#weights = torch.tensor(weights.values, dtype=torch.float).to(DEVICE)
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0003)
@@ -127,7 +116,6 @@ def train():
 
     return total_loss / len(train_loader)
 
-#updated validate function 
 def validate():
     model.eval()
     total_loss = 0
@@ -179,7 +167,6 @@ def validate():
 
     classes = np.arange(len(precision))
 
-    # 1. Precision vs Recall
     plt.figure()
     plt.plot(classes, precision)
     plt.plot(classes, recall)
@@ -190,7 +177,6 @@ def validate():
     plt.savefig("outputs/precision_vs_recall.png")
     plt.close()
 
-    # 2. Support
     plt.figure()
     plt.plot(classes, support)
     plt.xlabel("Class")
@@ -199,7 +185,6 @@ def validate():
     plt.savefig("outputs/support.png")
     plt.close()
 
-    # 3. Confusion Matrix Heatmap
     plt.figure()
     plt.imshow(cm)
     plt.title("Confusion Matrix")
