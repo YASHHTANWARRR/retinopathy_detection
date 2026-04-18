@@ -1,151 +1,133 @@
-# 🧠 Diabetic Retinopathy Detection (PyTorch + EfficientNet)
+# 🧠 Diabetic Retinopathy Detection using Deep Learning
 
-This project builds a deep learning model to detect **diabetic retinopathy severity** from retinal images using **PyTorch** and **EfficientNet**.
+## 📌 Overview
 
----
+This project focuses on detecting **Diabetic Retinopathy (DR)** using deep learning models.
+We implement and compare multiple architectures and improve performance using **ensemble learning techniques**, including:
 
-## 🚀 Features
-
-* 📊 Multi-class classification (5 severity levels)
-* ⚖️ Handles class imbalance using **Weighted Random Sampling**
-* 🧠 Uses **EfficientNet-B0 (pretrained)** for strong feature extraction
-* ⚡ GPU acceleration with CUDA
-* 📈 Evaluation with confusion matrix & classification report
+* Averaging Ensemble
+* **Stacking (Meta-Learning) Ensemble**
 
 ---
 
-## 📂 Dataset
+## 🎯 Objectives
 
-Dataset used:
-👉 Kaggle Diabetic Retinopathy Detection (resized version)
-
-Structure:
-
-```
-archive/
-│── trainLabels.csv
-│── resized_train/
-    └── resized_train/
-        ├── 10003_left.jpeg
-        ├── 10003_right.jpeg
-        └── ...
-```
-
-* Images are stored in a single folder
-* Labels are provided via CSV (`trainLabels.csv`)
+* Train multiple deep learning models for DR classification
+* Compare model performance using standard metrics
+* Improve predictions using ensemble techniques
+* Explore **meta-learning (stacking)** for better generalization
 
 ---
 
-## 🏷️ Classes
+## 🏗️ Models Used
 
-| Label | Description      |
-| ----- | ---------------- |
-| 0     | No DR            |
-| 1     | Mild             |
-| 2     | Moderate         |
-| 3     | Severe           |
-| 4     | Proliferative DR |
+* **EfficientNet-B0** – efficient and lightweight CNN
+* **ResNet50** – deep residual network for feature extraction
 
 ---
 
-## ⚙️ Installation
+## 🔗 Ensemble Methods
 
-### 1. Create environment
+### 1. Averaging Ensemble
 
-```bash
-conda create -n rapids_clean python=3.10 -y
-conda activate rapids_clean
-```
+Simple combination of model predictions:
 
-### 2. Install dependencies
-
-```bash
-pip install torch torchvision pandas numpy scikit-learn tqdm pillow
+```python id="avg01"
+final_output = (model1_output + model2_output) / 2
 ```
 
 ---
 
-## 🧠 Model Architecture
+### 2. Stacking (Meta Model) 🧠
 
-* Backbone: **EfficientNet-B0 (pretrained on ImageNet)**
-* Final layer modified for 5-class classification
+A more advanced ensemble technique where:
 
-```python
-from torchvision.models import efficientnet_b0
+* Base models (EfficientNet, ResNet) generate predictions
+* These predictions are used as **input features**
+* A **meta-model (e.g., Logistic Regression / MLP)** learns how to combine them
 
-model = efficientnet_b0(pretrained=True)
-model.classifier[1] = nn.Linear(model.classifier[1].in_features, 5)
-```
+**Workflow:**
 
----
+1. Train base models
+2. Collect predictions (probabilities/logits)
+3. Train meta-model on these predictions
+4. Final prediction = meta-model output
 
-## ⚖️ Handling Class Imbalance
-
-This project uses:
-
-✅ **WeightedRandomSampler**
-❌ No weighted loss (avoids over-correction)
+👉 This allows the system to learn **which model to trust more in different cases**
 
 ---
 
-## 🏃 Training
+## 📊 Evaluation Metrics
 
-Run training:
-
-```bash
-python train_diabetes.py
-```
-
-### Default settings:
-
-* Batch size: 8
-* Epochs: 15
-* Optimizer: Adam
-* Learning rate: 0.0003
-
----
-
-## 📊 Evaluation
-
-The model outputs:
-
-* Confusion Matrix
-* Classification Report (precision, recall, F1-score)
 * Accuracy
+* Precision
+* Recall
+* F1 Score
+* Cohen’s Kappa
 
 ---
 
-## 🧠 Key Learnings
+## 📈 Outputs
 
-* Medical datasets are **highly imbalanced**
-* Using both weighted loss + sampler can **break training**
-* EfficientNet provides strong performance with low VRAM
-
----
-
-## ⚠️ Hardware Requirements
-
-* GPU recommended (4GB+ VRAM)
-* EfficientNet-B0 works on low-memory GPUs
-* EfficientNet-B4 requires 6–8GB VRAM
+* Training & validation loss curves
+* Accuracy plots
+* CSV logs
+* Model comparison results
+* Ensemble vs individual model performance
 
 ---
 
-## 📈 Future Improvements
+## 🧪 Dataset
 
-* 🔥 Grad-CAM visualization (lesion highlighting)
-* 🔥 EfficientNet-B4 / B5 (if higher VRAM available)
-* 🔥 Ensemble models
-* 🔥 Advanced preprocessing (CLAHE)
+Retinal fundus images for diabetic retinopathy detection
 
----
-
-## 🤝 Contributing
-
-Pull requests are welcome. For major changes, open an issue first.
+*(Specify dataset: APTOS / Kaggle / custom dataset)*
 
 ---
 
-## 📜 License
+## ⚙️ Workflow
 
-This project is for educational and research purposes.
+1. Data preprocessing
+2. Train base models (EfficientNet, ResNet)
+3. Evaluate individual models
+4. Apply averaging ensemble
+5. Apply stacking (meta-model)
+6. Compare all approaches
+
+---
+
+## 🚀 Future Improvements
+
+* Add more base models (DenseNet, ViT)
+* Optimize meta-model architecture
+* Cross-validation stacking
+* Real-time deployment (web/app)
+
+---
+
+## 🧠 Research Context
+
+Modern healthcare systems increasingly combine **deep learning + IoT + medical imaging** for early disease detection.
+For example, machine learning models combined with imaging data can significantly improve diagnostic accuracy and prediction performance .
+
+---
+
+## 📂 Project Structure
+
+```id="tree02"
+├── models/
+├── data/
+├── results/
+├── train.py
+├── evaluate.py
+├── ensemble.py
+├── README.md
+```
+
+---
+
+## 💡 Key Insights
+
+* Deep CNNs provide strong baseline performance
+* Averaging improves stability
+* **Stacking provides the best performance by learning model relationships**
