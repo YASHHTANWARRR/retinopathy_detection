@@ -18,6 +18,7 @@ from sklearn.metrics import (
     cohen_kappa_score
 )
 import matplotlib.pyplot as plt
+import torch.nn.functional as F
 
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 CSV_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/trainLabels.csv"
@@ -64,8 +65,11 @@ val_dataset = RetinoDataset(val_df, transform)
 
 labels = train_df["label"].values
 class_sample_count = np.bincount(labels)
-weights = 1. / class_sample_count
-samples_weight = weights[labels]
+
+weights = 1.0 / class_sample_count
+weights = torch.tensor(weights, dtype=torch.float).to(DEVICE)
+
+samples_weight = weights.cpu().numpy()[labels]
 
 sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
 
@@ -83,7 +87,7 @@ def get_models():
 
 efficient_model, resnet_model = get_models()
 
-criterion = nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss(weight=weights, label_smoothing=0.1)
 optimizer_eff = torch.optim.Adam(efficient_model.parameters(), lr=0.0003)
 optimizer_res = torch.optim.Adam(resnet_model.parameters(), lr=0.0003)
 
@@ -149,11 +153,12 @@ def evaluate_ensemble(models):
             images = images.to(DEVICE)
             labels = labels.to(DEVICE)
 
-            outputs = []
-            for m in models:
-                outputs.append(m(images))
+            out_eff = F.softmax(models[0](images), dim=1)
+            out_res = F.softmax(models[1](images), dim=1)
 
-            outputs = torch.mean(torch.stack(outputs), dim=0)
+            # 🔥 weighted ensemble (based on your results)
+            outputs = 0.7 * out_eff + 0.3 * out_res
+
             _, preds = torch.max(outputs, 1)
 
             all_preds.extend(preds.cpu().numpy())
