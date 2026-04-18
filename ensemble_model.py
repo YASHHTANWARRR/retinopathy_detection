@@ -31,7 +31,7 @@ EPOCHS = 15
 NUM_CLASSES = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-OUTPUT_DIR = "outputs_ensemble_META_RUN3"
+OUTPUT_DIR = "outputs_ensemble_META_RUN4"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 df = pd.read_csv(CSV_PATH)
