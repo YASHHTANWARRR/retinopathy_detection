@@ -198,7 +198,7 @@ for c in np.unique(y_np):
     X_c = X_np[y_np == c]
     y_c = y_np[y_np == c]
 
-    X_res, y_res = resample(X_c, y_c, replace=True, n_samples=2000, random_state=42)
+    X_res, y_res = resample(X_c, y_c, replace=True, n_samples=4000, random_state=42)
 
     X_bal.append(X_res)
     y_bal.append(y_res)
