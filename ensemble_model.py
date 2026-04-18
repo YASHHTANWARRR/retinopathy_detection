@@ -30,7 +30,7 @@ EPOCHS = 15
 NUM_CLASSES = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-OUTPUT_DIR = "outputs_ensemble_meta_run2"
+OUTPUT_DIR = "outputs_ensemble_META_RUN3"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 df = pd.read_csv(CSV_PATH)
@@ -65,20 +65,19 @@ val_dataset = RetinoDataset(val_df, transform)
 
 labels = train_df["label"].values
 class_sample_count = np.bincount(labels)
-
 weights = 1.0 / class_sample_count
 samples_weight = weights[labels]
 
 sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
 
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler, num_workers=4, pin_memory=True)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler, num_workers=4)
+val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
 def get_models():
     eff = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
     eff.classifier[1] = nn.Linear(eff.classifier[1].in_features, NUM_CLASSES)
 
-    res = models.resnet50(weights=ResNet50_Weights.DEFAULT)
+    res = resnet50(weights=ResNet50_Weights.DEFAULT)
     res.fc = nn.Linear(res.fc.in_features, NUM_CLASSES)
 
     return eff.to(DEVICE), res.to(DEVICE)
@@ -87,8 +86,8 @@ efficient_model, resnet_model = get_models()
 
 criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
 
-optimizer_eff = torch.optim.Adam(efficient_model.parameters(), lr=0.0003)
-optimizer_res = torch.optim.Adam(resnet_model.parameters(), lr=0.0003)
+optimizer_eff = torch.optim.Adam(efficient_model.parameters(), lr=3e-4)
+optimizer_res = torch.optim.Adam(resnet_model.parameters(), lr=3e-4)
 
 def train(model, optimizer):
     model.train()
@@ -102,238 +101,157 @@ def train(model, optimizer):
 
 def evaluate_model(model):
     model.eval()
-    all_preds, all_labels = [], []
+    preds, labs = [], []
     with torch.no_grad():
         for images, labels in val_loader:
             images = images.to(DEVICE)
             outputs = model(images)
-            preds = torch.argmax(outputs, dim=1)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.numpy())
-    return all_preds, all_labels
+            preds.extend(torch.argmax(outputs, dim=1).cpu().numpy())
+            labs.extend(labels.numpy())
+    return preds, labs
 
 def evaluate_ensemble():
-    all_preds, all_labels = [], []
+    preds, labs = [], []
     with torch.no_grad():
         for images, labels in val_loader:
             images = images.to(DEVICE)
-            out_eff = F.softmax(efficient_model(images), dim=1)
-            out_res = F.softmax(resnet_model(images), dim=1)
-            outputs = 0.7 * out_eff + 0.3 * out_res
-            preds = torch.argmax(outputs, dim=1)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.numpy())
-    return all_preds, all_labels
-
-def get_meta_features():
-    efficient_model.eval()
-    resnet_model.eval()
-    features, labels_list = [], []
-
-    with torch.no_grad():
-        for images, labels in val_loader:
-            images = images.to(DEVICE)
-
-            out_eff = F.softmax(efficient_model(images), dim=1)
-            out_res = F.softmax(resnet_model(images), dim=1)
-
-            entropy_eff = -torch.sum(out_eff * torch.log(out_eff + 1e-8), dim=1, keepdim=True)
-            entropy_res = -torch.sum(out_res * torch.log(out_res + 1e-8), dim=1, keepdim=True)
-
-            max_eff = torch.max(out_eff, dim=1, keepdim=True)[0]
-            max_res = torch.max(out_res, dim=1, keepdim=True)[0]
-
-            combined = torch.cat([
-                out_eff,
-                out_res,
-                entropy_eff,
-                entropy_res,
-                max_eff,
-                max_res
-            ], dim=1)
-
-            features.append(combined.cpu())
-            labels_list.append(labels)
-
-    return torch.cat(features), torch.cat(labels_list)
-
-class MetaModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(NUM_CLASSES * 2 + 4, 128),
-            nn.BatchNorm1d(128),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(128, 64),
-            nn.BatchNorm1d(64),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, NUM_CLASSES)
-        )
-
-    def forward(self, x):
-        return self.net(x)
-
-def evaluate_stacked():
-    efficient_model.eval()
-    resnet_model.eval()
-    meta_model.eval()
-
-    all_preds, all_labels = [], []
-
-    with torch.no_grad():
-        for images, labels in val_loader:
-            images = images.to(DEVICE)
-
-            out_eff = F.softmax(efficient_model(images), dim=1)
-            out_res = F.softmax(resnet_model(images), dim=1)
-
-            entropy_eff = -torch.sum(out_eff * torch.log(out_eff + 1e-8), dim=1, keepdim=True)
-            entropy_res = -torch.sum(out_res * torch.log(out_res + 1e-8), dim=1, keepdim=True)
-
-            max_eff = torch.max(out_eff, dim=1, keepdim=True)[0]
-            max_res = torch.max(out_res, dim=1, keepdim=True)[0]
-
-            combined = torch.cat([
-                out_eff,
-                out_res,
-                entropy_eff,
-                entropy_res,
-                max_eff,
-                max_res
-            ], dim=1)
-
-            final_out = meta_model(combined)
-            preds = torch.argmax(final_out, dim=1)
-
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.numpy())
-
-    return all_preds, all_labels
+            e1 = F.softmax(efficient_model(images), dim=1)
+            e2 = F.softmax(resnet_model(images), dim=1)
+            out = 0.7 * e1 + 0.3 * e2
+            preds.extend(torch.argmax(out, dim=1).cpu().numpy())
+            labs.extend(labels.numpy())
+    return preds, labs
 
 history = {
-    "resnet": {"acc": [], "kappa": [], "f1": []},
-    "efficientnet": {"acc": [], "kappa": [], "f1": []},
-    "ensemble": {"acc": [], "kappa": [], "f1": []}
+    "resnet": {"f1": []},
+    "efficientnet": {"f1": []},
+    "ensemble": {"f1": []}
 }
 
 for epoch in range(EPOCHS):
-    print(f"\nEpoch {epoch+1}/{EPOCHS}")
+    print(f"\nEpoch {epoch+1}")
 
     train(efficient_model, optimizer_eff)
     train(resnet_model, optimizer_res)
 
-    res_preds, res_labels = evaluate_model(resnet_model)
-    eff_preds, eff_labels = evaluate_model(efficient_model)
-    ens_preds, ens_labels = evaluate_ensemble()
+    r_pred, r_lab = evaluate_model(resnet_model)
+    e_pred, e_lab = evaluate_model(efficient_model)
+    en_pred, en_lab = evaluate_ensemble()
 
-    def metrics(y_true, y_pred):
-        return (
-            accuracy_score(y_true, y_pred),
-            cohen_kappa_score(y_true, y_pred),
-            precision_score(y_true, y_pred, average='macro', zero_division=0),
-            recall_score(y_true, y_pred, average='macro', zero_division=0),
-            f1_score(y_true, y_pred, average='macro', zero_division=0),
+    r_f1 = f1_score(r_lab, r_pred, average='macro', zero_division=0)
+    e_f1 = f1_score(e_lab, e_pred, average='macro', zero_division=0)
+    en_f1 = f1_score(en_lab, en_pred, average='macro', zero_division=0)
+
+    history["resnet"]["f1"].append(r_f1)
+    history["efficientnet"]["f1"].append(e_f1)
+    history["ensemble"]["f1"].append(en_f1)
+
+    print(f"EffNet F1: {e_f1:.4f}")
+    print(f"ResNet F1: {r_f1:.4f}")
+    print(f"Ensemble F1: {en_f1:.4f}")
+
+# ===== META FIX (ONLY FIXES ADDED) =====
+efficient_model.eval()
+resnet_model.eval()
+
+for p in efficient_model.parameters():
+    p.requires_grad = False
+for p in resnet_model.parameters():
+    p.requires_grad = False
+
+def get_meta():
+    feats, labs = [], []
+    with torch.no_grad():
+        for images, labels in val_loader:
+            images = images.to(DEVICE)
+
+            e1 = F.softmax(efficient_model(images), dim=1)
+            e2 = F.softmax(resnet_model(images), dim=1)
+
+            ent1 = -torch.sum(e1 * torch.log(e1 + 1e-8), dim=1, keepdim=True)
+            ent2 = -torch.sum(e2 * torch.log(e2 + 1e-8), dim=1, keepdim=True)
+
+            m1 = torch.max(e1, dim=1, keepdim=True)[0]
+            m2 = torch.max(e2, dim=1, keepdim=True)[0]
+
+            feats.append(torch.cat([e1, e2, ent1, ent2, m1, m2], dim=1).cpu())
+            labs.append(labels)
+
+    return torch.cat(feats), torch.cat(labs)
+
+meta_X, meta_y = get_meta()
+
+meta_X = (meta_X - meta_X.mean(0)) / (meta_X.std(0) + 1e-6)
+
+perm = torch.randperm(meta_X.size(0))
+meta_X = meta_X[perm]
+meta_y = meta_y[perm]
+
+class Meta(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(NUM_CLASSES*2+4, 128),
+            nn.ReLU(),
+            nn.Linear(128, NUM_CLASSES)
         )
+    def forward(self, x):
+        return self.net(x)
 
-    res = metrics(res_labels, res_preds)
-    eff = metrics(eff_labels, eff_preds)
-    ens = metrics(ens_labels, ens_preds)
+meta_model = Meta().to(DEVICE)
+opt = torch.optim.Adam(meta_model.parameters(), lr=1e-4)
 
-    history["resnet"]["acc"].append(res[0])
-    history["resnet"]["kappa"].append(res[1])
-    history["resnet"]["f1"].append(res[4])
-
-    history["efficientnet"]["acc"].append(eff[0])
-    history["efficientnet"]["kappa"].append(eff[1])
-    history["efficientnet"]["f1"].append(eff[4])
-
-    history["ensemble"]["acc"].append(ens[0])
-    history["ensemble"]["kappa"].append(ens[1])
-    history["ensemble"]["f1"].append(ens[4])
-
-    print(f"EffNet → Acc:{eff[0]:.4f} F1:{eff[4]:.4f}")
-    print(f"ResNet → Acc:{res[0]:.4f} F1:{res[4]:.4f}")
-    print(f"Ensemble → Acc:{ens[0]:.4f} F1:{ens[4]:.4f}")
-
-meta_X, meta_y = get_meta_features()
-meta_model = MetaModel().to(DEVICE)
-
-meta_optimizer = torch.optim.Adam(meta_model.parameters(), lr=3e-4)
-meta_criterion = nn.CrossEntropyLoss()
-
-for epoch in range(8):
+for i in range(6):
     meta_model.train()
-    inputs = meta_X.float().to(DEVICE)
-    targets = meta_y.to(DEVICE)
-
-    meta_optimizer.zero_grad()
-    outputs = meta_model(inputs)
-    loss = meta_criterion(outputs, targets)
+    out = meta_model(meta_X.float().to(DEVICE))
+    loss = nn.CrossEntropyLoss()(out, meta_y.to(DEVICE))
+    opt.zero_grad()
     loss.backward()
-    meta_optimizer.step()
+    opt.step()
+    print("Meta loss:", loss.item())
 
-    print(f"Meta Epoch {epoch+1} Loss: {loss.item():.4f}")
+def stacked_eval():
+    preds, labs = [], []
+    with torch.no_grad():
+        for images, labels in val_loader:
+            images = images.to(DEVICE)
 
-stack_preds, stack_labels = evaluate_stacked()
+            e1 = F.softmax(efficient_model(images), dim=1)
+            e2 = F.softmax(resnet_model(images), dim=1)
 
-stack_acc = accuracy_score(stack_labels, stack_preds)
-stack_kappa = cohen_kappa_score(stack_labels, stack_preds)
-stack_f1 = f1_score(stack_labels, stack_preds, average='macro', zero_division=0)
+            ent1 = -torch.sum(e1 * torch.log(e1 + 1e-8), dim=1, keepdim=True)
+            ent2 = -torch.sum(e2 * torch.log(e2 + 1e-8), dim=1, keepdim=True)
 
-print(f"STACKED → Acc:{stack_acc:.4f} Kappa:{stack_kappa:.4f} F1:{stack_f1:.4f}")
+            m1 = torch.max(e1, dim=1, keepdim=True)[0]
+            m2 = torch.max(e2, dim=1, keepdim=True)[0]
 
-history["stacked"] = {
-    "acc": [stack_acc]*EPOCHS,
-    "kappa": [stack_kappa]*EPOCHS,
-    "f1": [stack_f1]*EPOCHS
-}
+            x = torch.cat([e1, e2, ent1, ent2, m1, m2], dim=1)
+            out = meta_model(x)
+            preds.extend(torch.argmax(out,1).cpu().numpy())
+            labs.extend(labels.numpy())
 
-epochs = range(1, EPOCHS + 1)
+    return preds, labs
 
-plt.figure()
-plt.plot(epochs, history["resnet"]["acc"])
-plt.plot(epochs, history["efficientnet"]["acc"])
-plt.plot(epochs, history["ensemble"]["acc"])
-plt.plot(epochs, history["stacked"]["acc"])
-plt.legend(["ResNet", "EffNet", "Ensemble", "Stacked"])
-plt.savefig(os.path.join(OUTPUT_DIR, "accuracy.png"))
-plt.close()
+sp, sl = stacked_eval()
+sf1 = f1_score(sl, sp, average='macro', zero_division=0)
 
-plt.figure()
-plt.plot(epochs, history["resnet"]["kappa"])
-plt.plot(epochs, history["efficientnet"]["kappa"])
-plt.plot(epochs, history["ensemble"]["kappa"])
-plt.plot(epochs, history["stacked"]["kappa"])
-plt.legend(["ResNet", "EffNet", "Ensemble", "Stacked"])
-plt.savefig(os.path.join(OUTPUT_DIR, "kappa.png"))
-plt.close()
+print("STACKED F1:", sf1)
+
+# ===== PLOTS =====
+epochs = range(1, EPOCHS+1)
 
 plt.figure()
 plt.plot(epochs, history["resnet"]["f1"])
 plt.plot(epochs, history["efficientnet"]["f1"])
 plt.plot(epochs, history["ensemble"]["f1"])
-plt.plot(epochs, history["stacked"]["f1"])
-plt.legend(["ResNet", "EffNet", "Ensemble", "Stacked"])
-plt.savefig(os.path.join(OUTPUT_DIR, "f1.png"))
+plt.legend(["ResNet","EffNet","Ensemble"])
+plt.savefig(os.path.join(OUTPUT_DIR,"f1.png"))
 plt.close()
 
-cm = confusion_matrix(stack_labels, stack_preds)
-
-plt.figure()
+cm = confusion_matrix(sl, sp)
 plt.imshow(cm)
 plt.colorbar()
-plt.savefig(os.path.join(OUTPUT_DIR, "confusion_matrix.png"))
+plt.savefig(os.path.join(OUTPUT_DIR,"cm.png"))
 plt.close()
 
-recall_vals = recall_score(stack_labels, stack_preds, average=None, zero_division=0)
-
-plt.figure()
-plt.plot(range(len(recall_vals)), recall_vals)
-plt.savefig(os.path.join(OUTPUT_DIR, "class_recall.png"))
-plt.close()
-
-print("\nDONE")
+print("DONE")
