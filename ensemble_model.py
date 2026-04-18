@@ -21,6 +21,7 @@ from sklearn.metrics import (
 )
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
+from sklearn.utils import resample
 
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 CSV_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/trainLabels.csv"
@@ -187,6 +188,24 @@ perm = torch.randperm(meta_X.size(0))
 meta_X = meta_X[perm]
 meta_y = meta_y[perm]
 
+#added resampling to balance meta dataset
+X_np = meta_X.numpy()
+y_np = meta_y.numpy()
+
+X_bal, y_bal = [], []
+
+for c in np.unique(y_np):
+    X_c = X_np[y_np == c]
+    y_c = y_np[y_np == c]
+
+    X_res, y_res = resample(X_c, y_c, replace=True, n_samples=2000, random_state=42)
+
+    X_bal.append(X_res)
+    y_bal.append(y_res)
+
+meta_X = torch.tensor(np.vstack(X_bal))
+meta_y = torch.tensor(np.hstack(y_bal))
+#till here
 class Meta(nn.Module):
     def __init__(self):
         super().__init__()
@@ -201,10 +220,20 @@ class Meta(nn.Module):
 meta_model = Meta().to(DEVICE)
 opt = torch.optim.Adam(meta_model.parameters(), lr=1e-4)
 
+#
+class_counts = np.bincount(meta_y.numpy())
+class_weights = 1.0 / (class_counts + 1e-6)
+class_weights = class_weights / class_weights.sum()
+
+class_weights = torch.tensor(class_weights, dtype=torch.float32).to(DEVICE)
+
+meta_X = meta_X.float().to(DEVICE)
+meta_y = meta_y.to(DEVICE)
+
 for i in range(6):
     meta_model.train()
-    out = meta_model(meta_X.float().to(DEVICE))
-    loss = nn.CrossEntropyLoss()(out, meta_y.to(DEVICE))
+    out = meta_model(meta_X)
+    loss = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=0.1)(out, meta_y)    
     opt.zero_grad()
     loss.backward()
     opt.step()
@@ -226,7 +255,7 @@ def stacked_eval():
             m2 = torch.max(e2, dim=1, keepdim=True)[0]
 
             x = torch.cat([e1, e2, ent1, ent2, m1, m2], dim=1)
-            out = meta_model(x)
+            out = meta_model(x) / 1.5
             preds.extend(torch.argmax(out,1).cpu().numpy())
             labs.extend(labels.numpy())
 
