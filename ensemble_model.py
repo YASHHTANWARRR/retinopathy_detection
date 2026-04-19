@@ -175,7 +175,17 @@ def get_meta():
             m1 = torch.max(e1, dim=1, keepdim=True)[0]
             m2 = torch.max(e2, dim=1, keepdim=True)[0]
 
-            feats.append(torch.cat([e1, e2, ent1, ent2, m1, m2], dim=1).cpu())
+            ens = 0.7 * e1 + 0.3 * e2
+
+            feats.append(torch.cat([
+                e1,
+                e2,
+                ens,     # 🔥 ADD THIS LINE
+                ent1,
+                ent2,
+                m1,
+                m2
+            ], dim=1).cpu())
             labs.append(labels)
 
     return torch.cat(feats), torch.cat(labs)
@@ -229,7 +239,7 @@ class Meta(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(NUM_CLASSES*2+4, 256),
+            nn.Linear(NUM_CLASSES*3+4, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Dropout(0.3),
@@ -249,7 +259,7 @@ class Meta(nn.Module):
         return self.net(x)
 
 meta_model = Meta().to(DEVICE)
-opt = torch.optim.Adam(meta_model.parameters(), lr=1e-4)
+opt = torch.optim.Adam(meta_model.parameters(), lr=8e-5)
 
 #
 class_counts = np.bincount(meta_y.numpy())
@@ -285,7 +295,16 @@ def stacked_eval():
             m1 = torch.max(e1, dim=1, keepdim=True)[0]
             m2 = torch.max(e2, dim=1, keepdim=True)[0]
 
-            x = torch.cat([e1, e2, ent1, ent2, m1, m2], dim=1)
+            ens = 0.7 * e1 + 0.3 * e2
+            x = torch.cat([
+                e1,
+                e2,
+                ens,     # 🔥 ADD THIS
+                ent1,
+                ent2,
+                m1,
+                m2
+            ], dim=1)
             out = meta_model(x) / 1.2
             preds.extend(torch.argmax(out,1).cpu().numpy())
             labs.extend(labels.numpy())
