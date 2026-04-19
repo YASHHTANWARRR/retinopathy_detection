@@ -22,6 +22,7 @@ from sklearn.metrics import (
     cohen_kappa_score
 )
 
+
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 BATCH_SIZE = 8
 EPOCHS = 15

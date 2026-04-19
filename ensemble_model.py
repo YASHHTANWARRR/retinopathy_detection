@@ -23,22 +23,50 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from sklearn.utils import resample
 
+# loading second dataset
+def load_second_dataset(base_path):
+    mapping = {
+        "No_DR": 0,
+        "Mild": 1,
+        "Moderate": 2,
+        "Severe": 3,
+        "Proliferate_DR": 4
+    }
+
+    data = []
+
+    for cls in mapping:
+        folder = os.path.join(base_path, cls)
+        for img in os.listdir(folder):
+            data.append({
+                "image": os.path.join(folder, img),
+                "label": mapping[cls]
+            })
+
+    return pd.DataFrame(data)
+
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 CSV_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/trainLabels.csv"
+SECOND_DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset/archive/gaussian_filtered_images"
 
 BATCH_SIZE = 8
 EPOCHS = 15
 NUM_CLASSES = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-OUTPUT_DIR = "outputs_ensemble_META_RUN5"
+OUTPUT_DIR = "outputs_ensemble_META_RUN_2data"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 df = pd.read_csv(CSV_PATH)
 df["image"] = df["image"].apply(lambda x: os.path.join(DATA_PATH, x + ".jpeg"))
 df.rename(columns={"level": "label"}, inplace=True)
 
-train_df, val_df = train_test_split(df, test_size=0.2, stratify=df["label"])
+#loading new dataset
+df2 = load_second_dataset(SECOND_DATA_PATH)
+
+train_df1, val_df = train_test_split(df, test_size=0.2, stratify=df["label"])
+
+train_df = pd.concat([train_df1, df2], ignore_index=True)
 
 class RetinoDataset(Dataset):
     def __init__(self, df, transform=None):
@@ -66,7 +94,7 @@ val_dataset = RetinoDataset(val_df, transform)
 
 labels = train_df["label"].values
 class_sample_count = np.bincount(labels)
-weights = 1.0 / class_sample_count
+weights = 1.0 / (class_sample_count + 1e-6)
 samples_weight = weights[labels]
 
 sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
