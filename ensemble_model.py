@@ -38,6 +38,8 @@ def load_second_dataset(base_path):
     for cls in mapping:
         folder = os.path.join(base_path, cls)
         for img in os.listdir(folder):
+            if not img.lower().endswith((".png", ".jpg", ".jpeg")):
+                continue
             data.append({
                 "image": os.path.join(folder, img),
                 "label": mapping[cls]
@@ -47,7 +49,7 @@ def load_second_dataset(base_path):
 
 DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/resized_train/resized_train"
 CSV_PATH = "/home/hornet/dataset_folders/retinopathy_dataset2/archive/trainLabels.csv"
-SECOND_DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset/archive/gaussian_filtered_images"
+SECOND_DATA_PATH = "/home/hornet/dataset_folders/retinopathy_dataset/archive/gaussian_filtered_images/gaussian_filtered_images"
 
 BATCH_SIZE = 8
 EPOCHS = 15
@@ -93,9 +95,9 @@ train_dataset = RetinoDataset(train_df, transform)
 val_dataset = RetinoDataset(val_df, transform)
 
 labels = train_df["label"].values
-class_sample_count = np.bincount(labels)
+class_sample_count = np.bincount(labels, minlength=NUM_CLASSES)
 weights = 1.0 / (class_sample_count + 1e-6)
-samples_weight = weights[labels]
+samples_weight = weights[labels].astype(np.float32)
 
 sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
 
