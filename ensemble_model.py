@@ -31,7 +31,7 @@ EPOCHS = 15
 NUM_CLASSES = 5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-OUTPUT_DIR = "outputs_ensemble_META_RUN4"
+OUTPUT_DIR = "outputs_ensemble_META_RUN5"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 df = pd.read_csv(CSV_PATH)
@@ -183,6 +183,7 @@ def get_meta():
 meta_X, meta_y = get_meta()
 
 meta_X = (meta_X - meta_X.mean(0)) / (meta_X.std(0) + 1e-6)
+meta_X = torch.clamp(meta_X, -3, 3)
 
 perm = torch.randperm(meta_X.size(0))
 meta_X = meta_X[perm]
@@ -198,22 +199,52 @@ for c in np.unique(y_np):
     X_c = X_np[y_np == c]
     y_c = y_np[y_np == c]
 
-    X_res, y_res = resample(X_c, y_c, replace=True, n_samples=4000, random_state=42)
+    X_res, y_res = resample(X_c, y_c, replace=True, n_samples=5000, random_state=42)
 
     X_bal.append(X_res)
     y_bal.append(y_res)
 
-meta_X = torch.tensor(np.vstack(X_bal))
-meta_y = torch.tensor(np.hstack(y_bal))
+
+#meta_X = torch.tensor(np.vstack(X_bal))
+#meta_y = torch.tensor(np.hstack(y_bal))
+#TO avoid dtyoe surprise
+
+meta_X = torch.tensor(np.vstack(X_bal), dtype=torch.float32)
+meta_y = torch.tensor(np.hstack(y_bal), dtype=torch.long)
+
 #till here
+#class Meta(nn.Module):
+#    def __init__(self):
+#       super().__init__()
+#       self.net = nn.Sequential(
+#           nn.Linear(NUM_CLASSES*2+4, 128),
+#          nn.ReLU(),
+    #        nn.Linear(128, NUM_CLASSES)
+#  )
+# def forward(self, x):
+#     return self.net(x)
+
+#NEW META MODEL
 class Meta(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(NUM_CLASSES*2+4, 128),
+            nn.Linear(NUM_CLASSES*2+4, 256),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Linear(128, NUM_CLASSES)
+            nn.Dropout(0.3),
+
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+
+            nn.Linear(128, 64),
+            nn.ReLU(),
+
+            nn.Linear(64, NUM_CLASSES)
         )
+
     def forward(self, x):
         return self.net(x)
 
@@ -230,7 +261,7 @@ class_weights = torch.tensor(class_weights, dtype=torch.float32).to(DEVICE)
 meta_X = meta_X.float().to(DEVICE)
 meta_y = meta_y.to(DEVICE)
 
-for i in range(6):
+for i in range(12):
     meta_model.train()
     out = meta_model(meta_X)
     loss = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=0.1)(out, meta_y)    
@@ -255,7 +286,7 @@ def stacked_eval():
             m2 = torch.max(e2, dim=1, keepdim=True)[0]
 
             x = torch.cat([e1, e2, ent1, ent2, m1, m2], dim=1)
-            out = meta_model(x) / 1.5
+            out = meta_model(x) / 1.2
             preds.extend(torch.argmax(out,1).cpu().numpy())
             labs.extend(labels.numpy())
 
